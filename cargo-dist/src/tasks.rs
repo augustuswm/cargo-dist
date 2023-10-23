@@ -2282,12 +2282,15 @@ pub fn gather_work(cfg: &Config) -> Result<DistGraph> {
         // FIXME: this clone is hacky but I'm in the middle of a nasty refactor
         let package_config = graph.package_metadata(*pkg_idx).clone();
 
+        let mut should_include_release = false;
+
         // Create a Release for this binary
         let release = graph.add_release(*pkg_idx);
 
         // Tell the Release to include these binaries
         for binary in binaries {
             graph.add_binary(release, *pkg_idx, (*binary).clone());
+            should_include_release = true;
         }
 
         // Create variants for this Release for each target
@@ -2307,9 +2310,8 @@ pub fn gather_work(cfg: &Config) -> Result<DistGraph> {
 
             // Create the variant
             graph.add_variant(release, target.clone());
+            should_include_release = true;
         }
-        // Add executable zips to the Release
-        graph.add_executable_zip(release);
 
         // Add installers to the Release
         // Prefer the CLI's choices (`cfg`) if they're non-empty
@@ -2334,6 +2336,14 @@ pub fn gather_work(cfg: &Config) -> Result<DistGraph> {
 
             // Create the variant
             graph.add_installer(release, installer)?;
+            should_include_release = true;
+        }
+
+        // Only add this release if at least one binary, variant, or installer has been added
+        if should_include_release {
+
+            // Add executable zips to the Release
+            graph.add_executable_zip(release);
         }
     }
 
